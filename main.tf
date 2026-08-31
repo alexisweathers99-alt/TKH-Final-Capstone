@@ -25,9 +25,10 @@ resource "aws_vpc" "main" {
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block               = var.subnet_cidr
-  availability_zone        = var.availability_zone
-  map_public_ip_on_launch  = true
+  cidr_block              = var.subnet_cidr
+  availability_zone       = var.availability_zone
+  #tfsec:ignore:aws-ec2-no-public-ip-subnet -- intentional, public-facing web server per assignment spec
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "${var.project_name}-public-subnet"
@@ -70,6 +71,7 @@ resource "aws_security_group" "web" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
+    #tfsec:ignore:aws-ec2-no-public-ingress-sgr -- intentional, public web server per assignment spec
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -86,6 +88,7 @@ resource "aws_security_group" "web" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
+    #tfsec:ignore:aws-ec2-no-public-egress-sgr -- required for yum install during boot
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -114,6 +117,14 @@ resource "aws_instance" "web" {
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.web.id]
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    encrypted = true
+  }
 
   user_data = <<-EOF
               #!/bin/bash
