@@ -14,6 +14,7 @@ provider "aws" {
 }
 
 resource "aws_vpc" "main" {
+#tfsec:ignore:aws-ec2-require-vpc-flow-logs-for-all-vpcs -- out of scope for this capstone; would require additional CloudWatch/IAM resources
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
